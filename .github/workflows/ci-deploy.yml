@@ -11,20 +11,23 @@ permissions:
 
 jobs:
   # ============================
-  # 1. الاختبارات (بدون JDK)
+  # 1. الاختبارات
   # ============================
   test:
     name: اختبارات JavaScript
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm test
-        name: تشغيل الاختبارات
+
+      - name: تثبيت الحزم
+        run: npm install
+
+      - name: تشغيل الاختبارات
+        run: npm test
 
   # ============================
   # 2. بناء APK
@@ -39,7 +42,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - uses: actions/setup-java@v4
         with:
@@ -47,18 +49,17 @@ jobs:
           distribution: temurin
 
       - name: تثبيت الحزم
-        run: npm ci
+        run: npm install
 
       - name: بناء الواجهة
         run: npm run build:web
 
       - name: إضافة منصة أندرويد
-        run: npx cap add android || true
+        run: npx cap add android
 
       - name: مزامنة Capacitor
         run: npx cap sync android
 
-      # توليد keystore للتوقيع
       - name: توليد keystore للتوقيع
         run: |
           keytool -genkeypair -v \
@@ -70,10 +71,11 @@ jobs:
             -keypass claudelimits2024 \
             -dname "CN=Claude Limits, OU=App, O=App, L=Cairo, ST=Cairo, C=EG"
 
-      # إعداد ملف signing لـ Gradle
       - name: إعداد توقيع الإصدار
+        working-directory: android
         run: |
-          cat >> android/app/build.gradle <<'GRADLE'
+          # أضف signing config إلى app/build.gradle
+          cat >> app/build.gradle << 'GRADLE'
 
           android {
               signingConfigs {
@@ -98,12 +100,13 @@ jobs:
 
       - name: بناء APK (release)
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: نسخ APK للمخرجات
         run: |
           mkdir -p artifacts
           cp android/app/build/outputs/apk/release/app-release.apk artifacts/claude-limits.apk
+          echo "حجم APK:"
           ls -lh artifacts/
 
       - name: رفع APK كـ artifact
@@ -113,8 +116,7 @@ jobs:
           path: artifacts/claude-limits.apk
           retention-days: 30
 
-      # إذا كان push على main: أنشئ GitHub Release
-      - name: الحصول على رقم البناء
+      - name: رقم البناء
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: vars
         run: echo "sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
@@ -127,8 +129,8 @@ jobs:
           name: "إصدار ${{ steps.vars.outputs.sha }}"
           body: |
             ### APK جديد 🎉
-            حمّل الملف `claude-limits.apk` وثبّته على أندرويد مباشرة.
-            > تأكد من تفعيل «مصادر غير معروفة» في إعدادات أندرويد قبل التثبيت.
+            حمّل `claude-limits.apk` وثبّته على أندرويد مباشرة.
+            > فعّل «مصادر غير معروفة» في إعدادات أندرويد قبل التثبيت.
           files: artifacts/claude-limits.apk
           draft: false
           prerelease: false
