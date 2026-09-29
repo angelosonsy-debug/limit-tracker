@@ -1,0 +1,87 @@
+:root {
+  --bg: #eef2f4;
+  --card: #ffffff;
+  --ink: #12343b;
+  --text: #1b2a2e;
+  --muted: #5d7278;
+  --line: #d5dee1;
+  --ready: #14846f;
+  --ready-soft: #d9f0ea;
+  --wait: #b86e00;
+  --wait-soft: #fbead0;
+  --danger: #b3261e;
+  --radius: 14px;
+  font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", "Noto Naskh Arabic", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  padding: env(safe-area-inset-top) 14px calc(28px + env(safe-area-inset-bottom));
+  max-width: 640px;
+  margin-inline: auto;
+}
+.top { padding: 22px 4px 10px; }
+h1 { margin: 0; font-size: 26px; color: var(--ink); }
+.summary { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+.notice {
+  background: var(--ink); color: #fff; border-radius: var(--radius);
+  padding: 12px 14px; margin: 8px 0; display: flex; gap: 12px; align-items: center; justify-content: space-between;
+  font-size: 14px;
+}
+.accounts { display: grid; gap: 14px; margin-top: 10px; }
+.empty { text-align: center; color: var(--muted); padding: 28px 8px; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.card-head { display: flex; align-items: center; gap: 14px; }
+.ring {
+  --p: 100; --c: var(--ready);
+  width: 76px; height: 76px; border-radius: 50%; flex: none;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0);
+  display: grid; place-items: center;
+}
+.ring > span {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--card);
+  display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--c);
+  font-variant-numeric: tabular-nums; direction: ltr; text-align: center; line-height: 1.2;
+}
+.card.waiting .ring { --c: var(--wait); }
+.card-title { flex: 1; min-width: 0; }
+.card-title h2 { margin: 0; font-size: 19px; color: var(--ink); overflow-wrap: anywhere; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 10px; border-radius: 99px; margin-top: 2px; }
+.badge.ready { background: var(--ready-soft); color: var(--ready); }
+.badge.waiting { background: var(--wait-soft); color: var(--wait); }
+
+.limit { display: grid; gap: 10px; margin: 14px 0 6px; padding: 12px; background: var(--bg); border-radius: 10px; }
+.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.field input { font: inherit; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+input[type="text"], input[type="number"], input[type="datetime-local"] {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fff; color: var(--text); font-size: 15px; min-height: 44px;
+}
+.btn {
+  font: inherit; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 16px;
+  border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer;
+}
+.btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn.warn { background: var(--wait); border-color: var(--wait); color: #fff; }
+.btn.danger { color: var(--danger); }
+.btn.small { min-height: 36px; padding: 0 10px; font-size: 13px; }
+.btn:focus-visible, input:focus-visible { outline: 3px solid #4aa3b5; outline-offset: 2px; }
+
+.projects { list-style: none; margin: 10px 0 8px; padding: 0; display: grid; gap: 6px; }
+.projects li { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.projects li:last-child { border-bottom: 0; }
+.projects input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--ink); flex: none; }
+.projects .pname { flex: 1; overflow-wrap: anywhere; }
+.projects .done .pname { text-decoration: line-through; color: var(--muted); }
+.row { display: flex; gap: 8px; }
+.add-account { margin-top: 20px; display: grid; gap: 6px; }
+.add-account label { font-weight: 700; color: var(--ink); }
+.section-title { font-size: 13px; color: var(--muted); margin: 14px 0 0; }
+@media (prefers-reduced-motion: no-preference) { .ring { transition: background .4s; } }

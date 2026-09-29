@@ -1,0 +1,17 @@
+{
+  "name": "متتبع ليمت Claude",
+  "short_name": "ليمت Claude",
+  "description": "تتبع مشاريعك وأوقات انتهاء الليمت على حسابات Claude",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f4",
+  "theme_color": "#12343b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
