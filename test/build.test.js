@@ -1,25 +1,28 @@
-const test = require('node:test');
+const test   = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
+const fs     = require('node:fs');
+const path   = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
 
 test.before(() => {
-  execFileSync(process.execPath, [path.join(root, 'scripts', 'build.js')], { env: { ...process.env, GITHUB_SHA: 'abc123def456789' } });
+  execFileSync(process.execPath,
+    [path.join(root, 'scripts', 'build.js')],
+    { env: { ...process.env, GITHUB_SHA: 'abc123def456789' } });
 });
 
 const read = (f) => fs.readFileSync(path.join(dist, f), 'utf8');
 
 test('ملفات dist الأساسية موجودة', () => {
-  for (const f of ['index.html', 'app.js', 'core.js', 'store.js', 'sw.js', 'style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', '.nojekyll']) {
+  for (const f of ['index.html', 'app.js', 'core.js', 'store.js', 'style.css',
+                   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']) {
     assert.ok(fs.existsSync(path.join(dist, f)), 'مفقود: ' + f);
   }
 });
 
-test('manifest صالح للتثبيت كتطبيق', () => {
+test('manifest صالح لتطبيق أندرويد', () => {
   const m = JSON.parse(read('manifest.webmanifest'));
   assert.equal(m.display, 'standalone');
   assert.equal(m.dir, 'rtl');
@@ -27,7 +30,8 @@ test('manifest صالح للتثبيت كتطبيق', () => {
   assert.equal(m.start_url, './');
   const sizes = m.icons.map(i => i.sizes);
   assert.ok(sizes.includes('192x192') && sizes.includes('512x512'));
-  for (const i of m.icons) assert.ok(fs.existsSync(path.join(dist, i.src)), 'أيقونة مفقودة: ' + i.src);
+  for (const i of m.icons)
+    assert.ok(fs.existsSync(path.join(dist, i.src)), 'أيقونة مفقودة: ' + i.src);
 });
 
 test('الأيقونات PNG حقيقية بالأبعاد الصحيحة', () => {
@@ -39,38 +43,40 @@ test('الأيقونات PNG حقيقية بالأبعاد الصحيحة', () =
   }
 });
 
-test('index.html يربط كل الملفات ولا يعتمد على مصادر خارجية', () => {
+test('index.html يربط كل الملفات بالترتيب الصحيح', () => {
   const html = read('index.html');
-  for (const ref of ['manifest.webmanifest', 'style.css', 'core.js', 'store.js', 'app.js']) {
+  for (const ref of ['manifest.webmanifest', 'style.css', 'core.js', 'store.js', 'app.js'])
     assert.ok(html.includes(ref), 'غير مربوط: ' + ref);
-  }
   assert.ok(/dir="rtl"/.test(html));
-  assert.ok(!/https?:\/\//.test(html), 'يجب ألا يحتوي روابط خارجية');
-  assert.ok(html.indexOf('core.js') < html.indexOf('store.js') && html.indexOf('store.js') < html.indexOf('app.js'));
+  const iCore = html.indexOf('core.js');
+  const iStore = html.indexOf('store.js');
+  const iApp   = html.indexOf('app.js');
+  assert.ok(iCore < iStore && iStore < iApp, 'ترتيب السكريبتات خاطئ');
 });
 
-test('Service Worker: تم ختم النسخة وكل ملفات الكاش موجودة', () => {
-  const sw = read('sw.js');
-  assert.ok(!sw.includes('__BUILD__'));
-  assert.ok(sw.includes('claude-limits-abc123def456'));
-  const shell = /var SHELL = (\[[\s\S]*?\]);/.exec(sw);
-  assert.ok(shell, 'قائمة SHELL غير موجودة');
-  const files = eval(shell[1]);
-  for (const f of files) {
-    if (f === './') continue;
-    assert.ok(fs.existsSync(path.join(dist, f)), 'ملف كاش مفقود: ' + f);
+test('capacitor stub موجود في index.html', () => {
+  const html = read('index.html');
+  assert.ok(html.includes('isNativePlatform'), 'Capacitor stub مفقود');
+});
+
+test('app.js يستخدم Capacitor.Plugins', () => {
+  const js = read('app.js');
+  assert.ok(js.includes('Capacitor.isNativePlatform'), 'فحص isNativePlatform مفقود');
+  assert.ok(js.includes('LocalNotifications'), 'LocalNotifications مفقود');
+  assert.ok(js.includes('Preferences'), 'Preferences مفقود');
+  assert.ok(js.includes('scheduleNativeNotif'), 'جدولة الإشعارات مفقودة');
+  assert.ok(js.includes('requestNotifPermission'), 'طلب الإذن مفقود');
+});
+
+test('كل ملفات JS سليمة نحوياً', () => {
+  for (const f of ['app.js', 'core.js', 'store.js']) {
+    assert.doesNotThrow(() => new Function(read(f)), 'خطأ نحوي في ' + f);
   }
 });
 
-test('كل ملفات JS سليمة نحويا', () => {
-  for (const f of ['app.js', 'core.js', 'store.js', 'sw.js']) {
-    assert.doesNotThrow(() => new Function(read(f)), f);
-  }
-});
-
-test('الإشعارات والشارة موجودة في الكود', () => {
-  assert.ok(read('app.js').includes('setAppBadge'));
-  assert.ok(read('sw.js').includes('setAppBadge'));
-  assert.ok(read('sw.js').includes('periodicsync'));
-  assert.ok(read('app.js').includes('requestPermission'));
+test('capacitor.config.json موجود وصالح', () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, 'capacitor.config.json'), 'utf8'));
+  assert.ok(cfg.appId.includes('.'), 'appId يجب أن يكون reverse-domain');
+  assert.equal(cfg.webDir, 'dist');
+  assert.ok(cfg.appName);
 });

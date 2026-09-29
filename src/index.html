@@ -2,18 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#12343b">
-  <meta name="description" content="تتبع مشاريعك وأوقات انتهاء الليمت على حسابات Claude">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
-  <title>متتبع ليمت Claude</title>
+  <title>ليمت Claude</title>
 </head>
 <body>
   <header class="top">
-    <h1>ليمت Claude</h1>
+    <div class="top-row">
+      <h1>ليمت Claude</h1>
+      <span id="badge-dot" class="badge-dot" hidden></span>
+    </div>
     <p id="summary" class="summary" aria-live="polite"></p>
   </header>
 
@@ -22,13 +25,20 @@
   <main id="accounts" class="accounts"></main>
 
   <form id="add-account" class="add-account" autocomplete="off">
-    <label for="new-account">إضافة حساب</label>
+    <label for="new-account">➕ إضافة حساب جديد</label>
     <div class="row">
-      <input id="new-account" type="text" placeholder="اسم الحساب، مثل: الحساب الأول" maxlength="40">
+      <input id="new-account" type="text" placeholder="اسم الحساب (مثال: الحساب الأول)" maxlength="40">
       <button type="submit" class="btn primary">إضافة</button>
     </div>
   </form>
 
+  <!-- Capacitor bridge (حقيقي من الAPK) -->
+  <script>
+    // stub للبيئة غير الأصلية
+    if (typeof Capacitor === 'undefined') {
+      window.Capacitor = { isNativePlatform: function(){ return false; }, Plugins: {} };
+    }
+  </script>
   <script src="core.js"></script>
   <script src="store.js"></script>
   <script src="app.js"></script>

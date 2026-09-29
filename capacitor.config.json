@@ -1,0 +1,22 @@
+{
+  "appId": "com.claudelimits.app",
+  "appName": "ليمت Claude",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "buildOptions": {
+      "keystorePath": "release.keystore",
+      "keystorePassword": "claudelimits2024",
+      "keystoreAlias": "claudelimits",
+      "keystoreAliasPassword": "claudelimits2024",
+      "releaseType": "APK"
+    }
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_notification",
+      "iconColor": "#12343b",
+      "sound": "beep.wav"
+    }
+  }
+}

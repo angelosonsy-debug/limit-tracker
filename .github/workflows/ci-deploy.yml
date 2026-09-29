@@ -1,4 +1,4 @@
-name: اختبار ونشر
+name: اختبار وبناء APK
 
 on:
   push:
@@ -7,41 +7,128 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
+  # ============================
+  # 1. الاختبارات (بدون JDK)
+  # ============================
   test:
-    name: الاختبارات والبناء
+    name: اختبارات JavaScript
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: تشغيل الاختبارات
-        run: npm test
-      - name: بناء التطبيق
-        run: npm run build
-      - name: تجهيز صفحات GitHub
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        name: تشغيل الاختبارات
 
-  deploy:
-    name: النشر على GitHub Pages
+  # ============================
+  # 2. بناء APK
+  # ============================
+  build-apk:
+    name: بناء APK
     needs: test
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: تثبيت الحزم
+        run: npm ci
+
+      - name: بناء الواجهة
+        run: npm run build:web
+
+      - name: إضافة منصة أندرويد
+        run: npx cap add android || true
+
+      - name: مزامنة Capacitor
+        run: npx cap sync android
+
+      # توليد keystore للتوقيع
+      - name: توليد keystore للتوقيع
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/release.keystore \
+            -alias claudelimits \
+            -keyalg RSA -keysize 2048 \
+            -validity 10000 \
+            -storepass claudelimits2024 \
+            -keypass claudelimits2024 \
+            -dname "CN=Claude Limits, OU=App, O=App, L=Cairo, ST=Cairo, C=EG"
+
+      # إعداد ملف signing لـ Gradle
+      - name: إعداد توقيع الإصدار
+        run: |
+          cat >> android/app/build.gradle <<'GRADLE'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("../release.keystore")
+                      storePassword "claudelimits2024"
+                      keyAlias "claudelimits"
+                      keyPassword "claudelimits2024"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
+              }
+          }
+          GRADLE
+
+      - name: منح صلاحيات Gradle
+        run: chmod +x android/gradlew
+
+      - name: بناء APK (release)
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: نسخ APK للمخرجات
+        run: |
+          mkdir -p artifacts
+          cp android/app/build/outputs/apk/release/app-release.apk artifacts/claude-limits.apk
+          ls -lh artifacts/
+
+      - name: رفع APK كـ artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-limits-apk
+          path: artifacts/claude-limits.apk
+          retention-days: 30
+
+      # إذا كان push على main: أنشئ GitHub Release
+      - name: الحصول على رقم البناء
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: vars
+        run: echo "sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: إنشاء GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ steps.vars.outputs.sha }}
+          name: "إصدار ${{ steps.vars.outputs.sha }}"
+          body: |
+            ### APK جديد 🎉
+            حمّل الملف `claude-limits.apk` وثبّته على أندرويد مباشرة.
+            > تأكد من تفعيل «مصادر غير معروفة» في إعدادات أندرويد قبل التثبيت.
+          files: artifacts/claude-limits.apk
+          draft: false
+          prerelease: false
